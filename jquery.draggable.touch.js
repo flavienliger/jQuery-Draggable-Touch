@@ -750,7 +750,7 @@
 		 */
 		_dropped: function(e, el){
 			this._out();
-			return this._trigger('drop', e, {draggable: el});
+			return this._trigger('drop', e, {draggable: $(el)});
 		},
 		
 		/**
