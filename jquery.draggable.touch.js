@@ -31,10 +31,12 @@
 	 */
 	var _setOption = function(arg){
 
+		var select;
+		
 		if(arg[0] === 'option'){
 
 			if(typeof arg[1] === 'string'){
-				var select = arg[1];
+				select = arg[1];
 
 				// set value
 				if(arg[2] !== undefined){
@@ -66,7 +68,7 @@
 		// disable/ enable
 		else {
 
-			var select = arg[0];
+			select = arg[0];
 			return _setActivate.apply(this, [select]);
 		}
 	};
@@ -133,7 +135,7 @@
 			stop: function(){ return true; },
 
 			// parameter
-			cursorAt: {},				 	// start to
+			cursorAt: {},					// start to
 			delay: 0,						// delay before begin -notwork
 			revert: false,					// bool/ valid/ invalid
 			disabled: false,				// disabled
@@ -268,10 +270,10 @@
 					top: self.params.cursorAt.top*-1||0
 				};
 
-				// coord - pos + offset - margin
-				self.coord.translateX = coords.x-position.left+cursorAt.left-margin.top;
-				self.coord.translateY = coords.y-position.top+cursorAt.top-margin.left;
-
+				// coord - (pos + margin) + offset
+				self.coord.translateX = coords.x-(position.left+margin.left)+cursorAt.left;
+				self.coord.translateY = coords.y-(position.top+margin.top)+cursorAt.top;
+				
 				var transform = new Transform(self.obj)
 					.translate(self.coord.translateX, self.coord.translateY)
 					.getCssFormat();
@@ -863,7 +865,7 @@
 		 * @param {Event} e
 		 * @param {Object.<x, y>} mouse
 		 */
-		hover: 	function(e, mouse){
+		hover: function(e, mouse){
 
 			var droppableElement = _getDroppableElement();
 			var l = droppableElement.length;
@@ -874,9 +876,9 @@
 				if(droppableElement[i].params.hoverClass || droppableElement[i].params.out){ 
 					// colision aabb
 					if(mouse.x > droppableElement[i].coord.topLeft.x && 
-					   mouse.x < droppableElement[i].coord.bottomRight.x &&
-					   mouse.y > droppableElement[i].coord.topLeft.y && 
-					   mouse.y < droppableElement[i].coord.bottomRight.y)
+						mouse.x < droppableElement[i].coord.bottomRight.x &&
+						mouse.y > droppableElement[i].coord.topLeft.y && 
+						mouse.y < droppableElement[i].coord.bottomRight.y)
 					{
 						if($.inArray(i, dropManage.hoverDrop)==-1){
 							dropManage.hoverDrop.push(i);
@@ -909,9 +911,9 @@
 				droppableElement[i]._update();
 
 				if(mouse.x > droppableElement[i].coord.topLeft.x && 
-				   mouse.x < droppableElement[i].coord.bottomRight.x &&
-				   mouse.y > droppableElement[i].coord.topLeft.y && 
-				   mouse.y < droppableElement[i].coord.bottomRight.y)
+					mouse.x < droppableElement[i].coord.bottomRight.x &&
+					mouse.y > droppableElement[i].coord.topLeft.y && 
+					mouse.y < droppableElement[i].coord.bottomRight.y)
 				{
 					return droppableElement[i]._dropped(e, this.moveObject.get(0));
 				}
@@ -955,7 +957,7 @@
 		};
 		
 		return Math.sqrt((dist.x*dist.x)+(dist.y*dist.y));
-	}
+	};
 		
 	/**
 	 * Obtain coords exactly
@@ -982,7 +984,7 @@
 			x: coord.x + ox,
 			y: coord.y + oy
 		};
-	}
+	};
 	
 	/**
 	 * Coord touch/mouse
