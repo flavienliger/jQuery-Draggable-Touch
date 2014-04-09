@@ -217,23 +217,42 @@
 		 */
 		isMultitouch: function(){
 
+			if($('.ui-draggable-dragging').length > 0)
+				return true;
+			
 			var el = getDraggableElement();
 			for(var i=0, l=el.length; i<l; i++){
 				if(el[i].isStart)
 					return true;
 			}
+			
 			return false;
 		},
 
+		stopTouch: function(){
+			
+			$('.ui-draggable').trigger($.events.mouseup);
+		},
+		
 		/**
 		 * Begin drag check if we can start
 		 * @param {Event} e
 		 */
 		waitStart: function(e){
 
+			e.preventDefault();
+			
 			var self = $(this).data('draggable');
-
-			if(!self.isDraggable || !self.params.multitouch && self.isMultitouch())
+			
+			if(!self.params.multitouch && self.isMultitouch()){
+				self.stopTouch();
+				
+				// fix bug mouseup not fired
+				if($('.ui-draggable-dragging').length > 0)
+					$('.ui-draggable-dragging').remove();
+			}
+			
+			if(!self.isDraggable)
 				return false;
 			
 			self.isStart = true; // first start
@@ -364,7 +383,11 @@
 						height: '100%',
 						top: 0,
 						left: 0
-					}).appendTo('body');
+					})
+					.bind($.events.mousedown, function(){
+						self.stopTouch();
+					})
+					.appendTo('body');
 				}
 			};
 			
@@ -416,18 +439,22 @@
 		 */
 		waitDrag: function(e){
 
+			e.stopPropagation();
+			e.preventDefault();
+			
 			var self = $(this).data('draggable');
-
+			
+			if(!self.isStart)
+				return false;
+			
+			if(self.isDrag)
+				return self.drag(e);
+			
 			var coords = getCoordsDrag($(this).parent().get(0), e, self.touchID);
 			
 			// temp for cursorAt
 			self.coord.parentX = coords.x;
 			self.coord.parentY = coords.y;
-			
-			if(!self.isStart)
-				return false;
-			if(self.isDrag)
-				return self.drag(e);
 			
 			coords = getCoordsDrag(document.body, e, self.touchID);
 			
@@ -444,10 +471,8 @@
 		 * @param {Event} e
 		 */
 		drag: function(e){ 
+			
 			var self = this;
-
-			e.stopPropagation();
-			e.preventDefault();
 
 			if(!self.isDraggable || !self.isDrag)
 				return false;
@@ -487,20 +512,17 @@
 		 */
 		stop: function(e){
 			
-			var self = $(this).data('draggable');
-			
 			e.stopPropagation();
 			e.preventDefault();
-
+			
+			var self = $(this).data('draggable');
+			
 			if(!self.isDrag || !self.isDraggable || !self.isStart){
 				self.isStart = false;
 				return false;
 			}
 			
 			self.obj.removeClass('ui-draggable-dragging');
-			self.isStart = false;
-			self.isDrag = false;
-			
 			self.coord.top += self.coord.translateY;
 			self.coord.left += self.coord.translateX;
 
@@ -512,7 +534,8 @@
 					.getCssFormat()
 			});
 			
-			var dropped = dropManage.check.apply(self, [self.coord.event, {x: self.coord.mouseX, y: self.coord.mouseY}]);
+			var dropped = dropManage.check.apply(self, [self.coord.event, 
+								{x: self.coord.mouseX, y: self.coord.mouseY}]);
 			var revert = self.valueFct('revert');
 
 			if(String(revert) == 'true' || (revert == 'invalid' && !dropped) || (revert == 'valid' && dropped)){ 
@@ -522,7 +545,15 @@
 			else {
 				self.deleteClone();
 				self.trigger('stop', self.coord.event);
+				
+				self.isDraggable = false;
+				setTimeout(function(){
+					self.isDraggable = true;
+				}, 50);
 			}
+			
+			self.isStart = false;
+			self.isDrag = false;
 		},
 
 		/**
@@ -544,6 +575,8 @@
 		revert: function(e){
 			var self = this;
 
+			this.isDraggable = false;
+			
 			var dist = pytha({x: 0, y: 0}, {x: this.coord.translateX, y: this.coord.translateY});
 			var time = dist*0.002;
 
@@ -554,8 +587,6 @@
 					.getCssFormat()
 			});
 			
-			this.isDraggable = false;
-
 			setTimeout(function(){
 				self.coord.top -= self.coord.translateY;
 				self.coord.left -= self.coord.translateX;
