@@ -22,7 +22,7 @@
 	}
 	
 	var touch = $.events.mousedown == 'touchstart'? true: false;
-	
+	var dragEl = [];
 	
 	/**
 	 * Set option of drag
@@ -128,6 +128,11 @@
 			mouseY: 0
 		};
 		
+		this.previous = {
+			opacity : 1,
+			zIndex: 'initial'
+		};
+		
 		this.params = {
 			// event
 			start: function(){ return true; },
@@ -135,16 +140,23 @@
 			stop: function(){ return true; },
 
 			// parameter
-			cursorAt: {},					// start to
-			delay: 0,						// delay before begin -notwork
-			revert: false,					// bool/ valid/ invalid
-			disabled: false,				// disabled
-			enable: true,					// enable
-			helper: 'original',				// original/ helper/ fct
-			multitouch: false,				// multitouch element
-			distance: 1,					// range before start
+			addClasses: true,				// add class ui-draggable
+			appendTo: 'parent',				// container to append parent() to default
 			axis: 0,						// contraint axis x/y/0
-			appendTo: ''					// container to append parent() to default
+			cursor: 'pointer',				// cursor in drag -notwork
+			cursorAt: {},					// start to top/ left
+			delay: 0,						// delay before begin -notwork
+			disabled: false,				// disabled
+			distance: 1,					// range before start
+			helper: 'original',				// original/ helper/ fct
+			opacity: false,					// opacity in dragging
+			revert: false,					// bool/ valid/ invalid
+			revertDuration: 500,			// duration revert
+			zIndex: false,					// zIndex drag el
+			
+			// annex
+			enable: true,					// enable
+			multitouch: false				// multitouch element
 		};
 
 		$.extend(this.params, aParams);
@@ -184,7 +196,8 @@
 			var self = this;
 
 			this.obj.data('draggable', this);
-			this.obj.addClass('ui-draggable');
+			if(self.params.addClasses)
+				this.obj.addClass('ui-draggable');
 
 			this.obj.bind($.events.mousedown, self.waitStart)
 				.bind($.events.mousemove, self.waitDrag)
@@ -231,7 +244,9 @@
 
 		stopTouch: function(){
 			
-			$('.ui-draggable').trigger($.events.mouseup);
+			for(var i=0, l=dragEl.length; i<l; i++){
+				$(dragEl[i]).trigger($.events.mouseup);
+			}
 		},
 		
 		/**
@@ -248,11 +263,15 @@
 				self.stopTouch();
 				
 				// fix bug mouseup not fired
-				if($('.ui-draggable-dragging').length > 0)
-					$('.ui-draggable-dragging').remove();
+				if($('.ui-draggable-dragging').length > 0){
+					$('.ui-draggable-dragging').each(function(){
+						if(this !== self.obj.get(0))
+							$(this).remove();
+					});
+				}
 			}
 			
-			if(!self.isDraggable)
+			if(!self.isDraggable || !self.params.enable)
 				return false;
 			
 			self.isStart = true; // first start
@@ -322,6 +341,16 @@
 			}
 
 			self.moveObject.addClass('ui-draggable-dragging');
+			
+			if(this.params.opacity){
+				self.previous.opacity = self.obj.css('opacity');
+				self.moveObject.css('opacity', self.params.opacity);
+			}
+			
+			if(this.params.zIndex){
+				self.previous.zIndex = self.obj.css('z-index');
+				self.moveObject.css('z-index', self.params.zIndex);
+			}
 		},
 		
 		/**
@@ -347,7 +376,7 @@
 					self.coord.left = position.left+margin.left;
 					
 					// appendTo params
-					if(self.params.appendTo){
+					if(self.params.appendTo !== 'parent'){
 						var actualParent = self.obj.parent().offset();
 						var appendParent = $(self.params.appendTo).offset();
 						var less = {
@@ -444,7 +473,7 @@
 			
 			var self = $(this).data('draggable');
 			
-			if(!self.isStart)
+			if(!self.isStart || !self.params.enable)
 				return false;
 			
 			if(self.isDrag)
@@ -563,6 +592,13 @@
 			if(this.params.helper != 'original'){
 				this.moveObject.remove();
 			}
+			// reset original
+			else{
+				if(this.params.opacity)
+					this.obj.css('opacity', this.previous.opacity);
+				if(this.params.zIndex)
+					this.obj.css('z-index', this.previous.zIndex);
+			}
 			
 			$('.drag-block').remove();
 			dropManage.unHover.apply(this, []);
@@ -577,9 +613,11 @@
 
 			this.isDraggable = false;
 			
-			var dist = pytha({x: 0, y: 0}, {x: this.coord.translateX, y: this.coord.translateY});
-			var time = dist*0.002;
-
+			// revert uniform
+			//var dist = pytha({x: 0, y: 0}, {x: this.coord.translateX, y: this.coord.translateY});
+			//var time = dist*0.002;
+			var time = self.params.revertDuration/1000;
+			
 			this.moveObject.css({
 				WebkitTransition: '-webkit-transform '+time+'s ease-out',
 				WebkitTransform: new Transform(self.moveObject)
@@ -608,7 +646,7 @@
 					self.isDraggable = true;
 					self.trigger('stop', e);
 				}, 50);
-			}, time*1000);
+			}, self.params.revertDuration);
 		},
 
 		/**
@@ -662,12 +700,19 @@
 				if(aParams == 'destroy'){
 					$(this).data('draggable').destroy();
 					$(this).removeData('draggable');
+					// remove element in array
+					for(var i=0, l=dragEl.length; i<l; i++){
+						if(dragEl[i] == this){
+							dragEl.splice(i, 1);
+						}
+					}
 				}
 				else{
 					data.push(setOption.apply($(this).data('draggable'), [params]));
 				}
 			}
 			else if(!isOption){
+				dragEl.push(this);
 				new Drag($(this), first);
 			}
 		});
@@ -686,12 +731,12 @@
 		var el = [];
 		var temp;
 		
-		$('.ui-draggable').each(function(){
-			temp = $(this).data('draggable');
+		for(var i=0, l=dragEl.length; i<l; i++){
+			temp = $(dragEl[i]).data('draggable');
 			
 			if(temp)
 				el.push(temp);
-		});
+		}
 		return el;
 	};
 	
@@ -991,22 +1036,6 @@
 	
 	/* ---------------------------------------------- */
 	/* ----------------- UTILS ---------------------- */
-	
-	/**
-	 * Pythagore calcul
-	 * @param {Object.<x, y>} start
-	 * @param {Object.<x, y>} end
-	 * @return {Number} distance
-	 */
-	var pytha = function(start, end){
-		
-		var dist = {
-			x:Math.abs(start.x-end.x), 
-			y:Math.abs(start.y-end.y)
-		};
-		
-		return Math.sqrt((dist.x*dist.x)+(dist.y*dist.y));
-	};
 		
 	/**
 	 * Obtain coords exactly
