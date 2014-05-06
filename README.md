@@ -10,7 +10,7 @@ Use __[Transform Css](https://github.com/flavienliger/Transform-Css)__ for conve
 Adding Functionality
 ========
 
-- Multitouch : can drag multiple objects simultaneously
+- Multitouch : can drag multiple objects simultaneously !bug
 ```
 $('.draggable').draggable({
   multitouch: true
@@ -25,19 +25,24 @@ Option available
 Draggable
 -
 
-- cursorAt
-- revert
-- enable/disable
-- helper
-- multitouch
-- distance
+- addClasses
+- appendTo
 - axis
+- cursorAt
+- disabled
+- distance
+- helper
+- opacity
+- revert
+- revertDuration
+- zIndex
 
 Droppable
 -
 
+- activeClass
 - hoverClass
-- enable/disable
+- accept
 
 Support
 =======
