@@ -263,12 +263,16 @@
 				self.stopTouch();
 				
 				// fix bug mouseup not fired
+				// rework for delete clone
+				/*
 				if($('.ui-draggable-dragging').length > 0){
 					$('.ui-draggable-dragging').each(function(){
-						if(this !== self.obj.get(0))
-							$(this).remove();
+						if(this !== self.obj.get(0)){
+							//$(this).remove();
+						}
 					});
 				}
+				*/
 			}
 			
 			if(!self.isDraggable || !self.params.enable)
@@ -339,18 +343,6 @@
 			else {
 				self.moveObject = self.obj;		
 			}
-
-			self.moveObject.addClass('ui-draggable-dragging');
-			
-			if(this.params.opacity){
-				self.previous.opacity = self.obj.css('opacity');
-				self.moveObject.css('opacity', self.params.opacity);
-			}
-			
-			if(this.params.zIndex){
-				self.previous.zIndex = self.obj.css('z-index');
-				self.moveObject.css('z-index', self.params.zIndex);
-			}
 		},
 		
 		/**
@@ -364,6 +356,18 @@
 			 * Set position of moveObject
 			 */
 			var css = function(){
+					
+				self.moveObject.addClass('ui-draggable-dragging');
+
+				if(self.params.opacity){
+					self.previous.opacity = self.obj.css('opacity');
+					self.moveObject.css('opacity', self.params.opacity);
+				}
+
+				if(self.params.zIndex){
+					self.previous.zIndex = self.obj.css('z-index');
+					self.moveObject.css('z-index', self.params.zIndex);
+				}
 				
 				if(self.params.helper == 'clone' || typeof self.params.helper === 'function'){
 					var position = self.obj.position();
@@ -425,7 +429,7 @@
 			
 			if(!self.params.enable || !self.isDraggable || self.isDrag || !this.trigger('start', e))
 				return false;
-
+			
 			block();
 			
 			$.extend(self.coord, {
@@ -455,7 +459,7 @@
 					if(hide)
 						self.obj.hide();
 					
-					self.moveObject.show().appendTo(self.params.appendTo? self.params.appendTo: self.obj.parent());
+					self.moveObject.show().appendTo(self.params.appendTo!='parent'? self.params.appendTo: self.obj.parent());
 				}
 				
 				dropManage.update.apply(this, [e]);
