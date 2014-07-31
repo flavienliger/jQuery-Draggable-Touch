@@ -449,8 +449,9 @@
 				self.obj.show();
 			
 			self.isDrag = true;
+			self.obj.offset();
 			
-			setTimeout(function(){
+			//setTimeout(function(){
 				css();
 				self.setCursorAt();
 				
@@ -463,7 +464,7 @@
 				}
 				
 				dropManage.update.apply(this, [e]);
-			}, 50);
+			//}, 50);
 		},
 
 		/**
