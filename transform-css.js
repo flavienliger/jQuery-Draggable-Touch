@@ -33,9 +33,24 @@
 		// dom or string
 		else{
 			// element
-			if(typeof obj !== 'string')
-				obj = $(el).get(0).style.WebkitTransform;
-			
+			if(typeof obj !== 'string'){
+				var cssPrefixes = ['', '-webkit-', '-moz-', '-o-'];
+				
+				var el = obj.get(0);
+				var good = false;
+				
+				for(var i=0; i<cssPrefixes.length; i++){
+					if(el.style[cssPrefixes[i]+'transform']){
+						obj = el.style[cssPrefixes[i]+'transform'];
+						good = true;
+						break;
+					}
+				}
+				
+				if(!good)
+					obj = '';
+				
+			}
 			this.transform = this.convert(obj);
 		}
 	};
@@ -139,40 +154,55 @@
 			return this;
 		},
 
+		hasTransform: function(){
+			
+			for(var key in this.transform){
+				if(this.transform[key]){
+					return true;	
+				}
+			}
+			return false;
+		},
+		
 		/**
 		 * Get object transform
-		 * @param {Boolean} full - return null parameter
+		 * @param {Boolean|String} opt - true: return all parameter; name: return name of parameter
 		 * @returns {Object}
 		 */
-		get: function(full){
-			if(full){
+		get: function(opt){
+			var order = [
+				'translateX', 'translateY',// 'translateZ',
+				'scaleX', 'scaleY',
+				'rotateX', 'rotateY', 'rotateZ'
+			];
+			
+			if(typeof opt==='boolean' && opt){
+				
 				var obj = {};
-				var order = [
-					'translateX', 'translateY',// 'translateZ',
-					'scaleX', 'scaleY',
-					'rotateX', 'rotateY', 'rotateZ'
-				];
-				var val = [
-					0,0,
-					1,1,
-					0,0,0
-				];
 				
 				for(var i=6; i>=0; i--){
-					obj[order[i]] = this.transform[order[i]]||val[i];
+					obj[order[i]] = this.transform[order[i]]||(order[i].indexOf('scale')!=-1? 1:0);
 				}
 				return obj;
+			}			
+			else if(typeof opt==='string'){
+				
+				return this.transform[opt]||(opt.indexOf('scale')!=-1? 1:0);
 			}
 			return this.transform;
 		},
 
 		/**
 		 * Add css string to our object
-		 * @param {String} str
+		 * @param {String|Object} obj
 		 */
-		add: function(str){
+		add: function(obj){
 
-			var obj = this.convert(str);
+			var obj;
+			
+			if(typeof obj === 'string')
+				obj = this.convert(obj);
+			
 			for(var key in obj){
 				if(this.transform[key]){
 					this.transform[key] += obj[key];	
@@ -208,7 +238,7 @@
 		 * @param {Number} z
 		 */
 		rotate: function(x, y, z){
-
+			
 			if(y === undefined || y !== null){
 				this.set('rotateZ', x);	
 			}

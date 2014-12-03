@@ -65,11 +65,18 @@
 
 			return this.params;
 		}
-		// disable/ enable
+		// methoddisable/ enable
 		else {
-
 			select = arg[0];
-			return setActivate.apply(this, [select]);
+			
+			if(select == 'disable')
+				this.disable();
+			if(select == 'enable')
+				this.enable();
+			if(select == 'destroy')
+				this.destroy();
+			if(select == 'widget' && this.moveObject)
+				return this.moveObject;
 		}
 	};
 
@@ -112,7 +119,7 @@
 	var Drag = function($o, aParams){
 
 		this.obj = $o;						// draggable object
-		this.moveObject = $o;				// movable object
+		this.moveObject = undefined;		// movable object
 		this.touchID = null;				// identifiant touch
 
 		this.isDrag = false;				// is in move state
@@ -142,16 +149,21 @@
 			// parameter
 			addClasses: true,				// add class ui-draggable
 			appendTo: 'parent',				// container to append parent() to default
-			axis: 0,						// contraint axis x/y/0
-			cursor: 'pointer',				// cursor in drag -notwork
-			cursorAt: {},					// start to top/ left
-			delay: 0,						// delay before begin -notwork
+			axis: false,					// contraint axis x/y/0
+			containment: false,				// !not work
+			cursor: 'auto',					// !not work
+			cursorAt: false,				// start to top/ left
+			delay: 0,						// !no twork
 			disabled: false,				// disabled
 			distance: 1,					// range before start
+			grid: false,					// !not work
 			helper: 'original',				// original/ helper/ fct
 			opacity: false,					// opacity in dragging
 			revert: false,					// bool/ valid/ invalid
 			revertDuration: 500,			// duration revert
+			snap: false,					// !not work
+			snapMode: 'both',				// !not work
+			snapTolerance: 20,				// !not work
 			zIndex: false,					// zIndex drag el
 			
 			// annex
@@ -172,22 +184,32 @@
 		 * @param {Object} aData - special data
 		 * @returns {Boolean}
 		 */
-		trigger: function(type, aEvent, aData){
+		trigger: function(type, aEvent){
 			var self = this;
 			var event = aEvent||{};
 			event.type = type;
-
-			var data = aData||{};
+			
+			var data = {draggable: self.obj, helper: self.moveObject};
 
 			this.obj.trigger(event, data);
 
 			if(self.params[type] && typeof self.params[type] === 'function'){
-				return self.params[type].apply(this.obj.get(0), [event, {helper: self.moveObject}])===false?false: true;
+				return self.params[type].apply(this.obj.get(0), [event, data])===false?false: true;
 			}
 			
 			return true;
 		},
 
+		disable: function(){
+			this.params.disabled = true;
+			this.params.enable = false;
+		},
+		
+		enable: function(){
+			this.params.disabled = false;	
+			this.params.enable = true;
+		},
+		
 		/**
 		 * Make draggable
 		 * @param {Event} e - event for trigger
@@ -217,7 +239,7 @@
 		 */
 		valueFct: function(name){
 			if(typeof this.params[name] === 'function') {
-			   return this.params[name]();
+			   return this.params[name]({}, { draggable: this.obj, helper: this.moveObject });
 			}
 			else{
 				return this.params[name];	
@@ -297,6 +319,9 @@
 		 */
 		setCursorAt: function(){
 			var self = this;
+			
+			if(!self.params.cursorAt)
+				return false;
 			
 			if(self.params.cursorAt.top !== undefined || self.params.cursorAt.left !== undefined){
 
@@ -583,6 +608,7 @@
 				self.isDraggable = false;
 				setTimeout(function(){
 					self.isDraggable = true;
+					self.moveObject = undefined;
 				}, 50);
 			}
 			
@@ -649,6 +675,7 @@
 					
 					self.deleteClone();
 					self.isDraggable = true;
+					self.moveObject = undefined;
 					self.trigger('stop', e);
 				}, 50);
 			}, self.params.revertDuration);
@@ -696,9 +723,8 @@
 		var params = arguments;
 		var first = aParams||{};
 		var data = [];
-
-		var isOption = arguments[0] == 'option' || arguments[0] == 'disable' || arguments[0] == 'enable';
-
+		var push = false;
+		
 		this.each(function(){
 
 			if($(this).data('draggable')){
@@ -713,18 +739,23 @@
 					}
 				}
 				else{
-					data.push(setOption.apply($(this).data('draggable'), [params]));
+					var opt = setOption.apply($(this).data('draggable'), [params])
+					
+					if(opt)
+						data.push(opt);
 				}
 			}
-			else if(!isOption){
+			else if(typeof params[0] == 'object'){
 				dragEl.push(this);
 				new Drag($(this), first);
 			}
 		});
 
-		if(data.length>0 && arguments.length == 2)
+		if(data.length>0){
+			if(data.length == 1)
+				return data[0];
 			return data;
-
+		}
 		return this;
 	};
 
@@ -849,9 +880,15 @@
 		 * @param {jQuery} el - element drag
 		 * @returns {Boolean}
 		 */
-		dropped: function(e, el){
+		dropped: function(e, drag){
 			this.out();
-			return this.trigger('drop', e, {draggable: $(el)});
+			
+			return this.trigger('drop', e, {
+				draggable: drag.obj,
+				helper: drag.moveObject
+				//position: drag.moveObject.position(),
+				//offset: drag.moveObject.offset()
+			});
 		},
 		
 		/**
@@ -1014,7 +1051,7 @@
 					mouse.y > droppableElement[i].coord.topLeft.y && 
 					mouse.y < droppableElement[i].coord.bottomRight.y)
 				{
-					return droppableElement[i].dropped(e, this.obj.get(0));
+					return droppableElement[i].dropped(e, this);
 				}
 			}
 			return false;
